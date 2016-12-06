@@ -1,3 +1,8 @@
+import os
+import json
+
+import requests
+
 from collab.settings import AUTH_USER_MODEL
 from django.core.urlresolvers import reverse
 from django.db import models
@@ -10,6 +15,15 @@ NOUN = {
             'lead': 'Leadership',
             'innovate': 'Innovation',
         }
+
+MATTERMOST_ENDPOINT = os.getenv('MATTERMOST_ENDPOINT')
+
+PRAISE_TEMPLATE = """### Appreciation for {0}
+{1} recently offered these words of thanks to {2}:
+> {3}
+
+Light up a colleague's day by posting a note of thanks on a wiki profile!
+"""
 
 
 class Praise(models.Model):
@@ -39,3 +53,34 @@ class Praise(models.Model):
                 title, url, email_info)
 
         return super(Praise, self).save(*args, **kwargs)
+
+    def post_thanks_to_chat(self, channel):
+        """
+        Send a praise posting to Mattermost channel.
+        Returns success/error message
+        """
+
+        if not MATTERMOST_ENDPOINT:
+            return "MATTERMOST_ENDPOINT wasn't found in env variables."
+
+        hu_text = PRAISE_TEMPLATE.format(
+            self.recipient.user.person.full_name,
+            self.praise_nominator.person.full_name,
+            self.recipient.user.person.full_name,
+            self.reason
+        )
+        print "posted text will be {}".format(hu_text)
+        username = 'Molliebot'
+        error = 'error posting to Mattermost, status={0}, reason={1}'
+        data = {}
+        data['text'] = hu_text.strip()
+        data['username'] = username
+        data['channel'] = channel
+        headers = {'Content-Type': 'application/json'}
+        resp = requests.post(MATTERMOST_ENDPOINT,
+                             headers=headers,
+                             data=json.dumps(data))
+        if not resp.ok:
+            return error.format(resp.status_code, resp.reason)
+        else:
+            return "Praise posted to Mattermost"
