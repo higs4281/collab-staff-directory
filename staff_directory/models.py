@@ -70,7 +70,6 @@ class Praise(models.Model):
             self.recipient.user.person.full_name,
             self.reason
         )
-        print "posted text will be {}".format(hu_text)
         error = 'error posting to Mattermost, status={0}, reason={1}'
         data = {}
         data['text'] = hu_text.strip()
