@@ -17,6 +17,7 @@ NOUN = {
         }
 
 MATTERMOST_ENDPOINT = os.getenv('MATTERMOST_ENDPOINT')
+MATTERMOST_HUBOT_USERNAME = os.getenv('MATTERMOST_HUBOT_USERNAME')
 
 PRAISE_TEMPLATE = """### Appreciation for {0}
 {1} recently offered these words of thanks to {2}:
@@ -60,8 +61,8 @@ class Praise(models.Model):
         Returns success/error message
         """
 
-        if not MATTERMOST_ENDPOINT:
-            return "MATTERMOST_ENDPOINT wasn't found in env variables."
+        if not MATTERMOST_ENDPOINT and MATTERMOST_HUBOT_USERNAME:
+            return "Mattermost details were not found in env variables."
 
         hu_text = PRAISE_TEMPLATE.format(
             self.recipient.user.person.full_name,
@@ -70,11 +71,10 @@ class Praise(models.Model):
             self.reason
         )
         print "posted text will be {}".format(hu_text)
-        username = 'Molliebot'
         error = 'error posting to Mattermost, status={0}, reason={1}'
         data = {}
         data['text'] = hu_text.strip()
-        data['username'] = username
+        data['username'] = MATTERMOST_HUBOT_USERNAME
         data['channel'] = channel
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(MATTERMOST_ENDPOINT,
